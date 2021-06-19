@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 //import org.springframework.web.reactive.function.client.WebClient;
 
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 
 import in.nit.moviecatalogservice.models.CatalogItem;
 import in.nit.moviecatalogservice.models.Movie;
 import in.nit.moviecatalogservice.models.Rating;
 import in.nit.moviecatalogservice.models.UserRating;
+import in.nit.moviecatalogservice.services.MovieInfo;
+import in.nit.moviecatalogservice.services.UserRatingInfo;
 
 @RestController
 @RequestMapping("/catalog")
@@ -30,7 +33,11 @@ public class MovieCatalogResource {
 	@Autowired
 	private DiscoveryClient discoveryClient;
 	
-//	@Autowired
+	@Autowired
+	private MovieInfo movieInfo;
+	
+	@Autowired
+	private UserRatingInfo userRatingInfo; 
 	
 //	@Autowired
 //	private WebClient.Builder builder;
@@ -48,19 +55,14 @@ public class MovieCatalogResource {
 //				new Rating("5678", 5)
 //		);
 		
-		UserRating ratings = restTemplate.getForObject("http://rating-data-service/ratingsdata/user/"+ userId, UserRating.class);
+		UserRating ratings = userRatingInfo.getUserRating(userId);
 		
 		
-		return ratings.getUserRating().stream().map(rating -> { 
-			// For each movie ID, call movie info service and get details
-			Movie movie = restTemplate.getForObject("http://movie-info-service/movies/"+rating.getMovieId(), Movie.class);
-			// put them all together
-			return new CatalogItem(movie.getName(), "Test", rating.getRating());
-			
-		})
+		return ratings.getUserRating().stream().map(rating -> movieInfo.getCatalogItem(rating))
 		.collect(Collectors.toList());
 		
 	}
+	
 }
 
 
